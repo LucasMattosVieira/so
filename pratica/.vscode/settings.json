@@ -1,5 +1,7 @@
 {
     "files.associations": {
-        "semaphore.h": "c"
+        "semaphore.h": "c",
+        "stdio.h": "c",
+        "unistd.h": "c"
     }
 }
