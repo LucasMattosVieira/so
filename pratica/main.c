@@ -15,8 +15,10 @@
 struct shared_area {
     sem_t escrita;
     sem_t leitura;
-    //int busy_wait_vez;
     pid_t processos[7];
+    int pipe1[2];
+    int pipe2[2];
+    //int busy_wait_vez;
     Fila fila1;
     Fila fila2;
 };
@@ -52,6 +54,16 @@ int main()
 	printf("Memoria compartilhada no endereco=%p\n\n", shared_memory);
 
     shared_area_ptr = (struct shared_area *) shared_memory;
+
+    if ( pipe(shared_area_ptr->pipe1) == -1 ) {
+        printf("Erro pipe1"); 
+        return -1; 
+    }
+
+    if ( pipe(shared_area_ptr->pipe2) == -1 ) {
+        printf("Erro pipe2"); 
+        return -1; 
+    }
 
     shared_area_ptr->fila1 = criaFila();
     shared_area_ptr->fila2 = criaFila();
@@ -133,13 +145,25 @@ int main()
         pthread_create(&p4_t2, NULL, p4_thread2, NULL);
 
         // thread 1:
+        int n;
         while (1) {
             
             sem_wait((sem_t*)&shared_area_ptr->leitura);
 
             if (filaVazia(&shared_area_ptr->fila1) == 0) {
 
-                printf("\nthread 1, leu: %d\n",removeFila(&shared_area_ptr->fila1));
+                // remove 1 valor de F1 e manda pra P5 pelo pipe1
+                n = removeFila(&shared_area_ptr->fila1);
+                printf("\nthread 1, leu: %d\n",n);
+
+                if (shared_area_ptr->processos[4] == 0) {
+                    sleep(1);                                       // espera P5 ser criado, caso P4 leia F1 antes
+                }
+
+                if (shared_area_ptr->processos[4] > 0) {
+                    write(shared_area_ptr->pipe1[1],&n,sizeof(int));
+                    printf("\nthread 1 mandou %d no pipe1\n",n);
+                }
 
             } else {
                 sem_post((sem_t*)&shared_area_ptr->escrita);    // libera o semaforo de escrita
@@ -153,8 +177,24 @@ int main()
     } else if (idProcesso == 5) {
         printf("\nMeu id: %d. Meu pid: %d\nVou receber numeros de 4 por pipe1 e mandar pra 7\n",idProcesso, getpid());
 
+        int n;
+        while (1) {
+            // le valores do pipe1
+            read(shared_area_ptr->pipe1[0], &n, sizeof(int));
+            printf("\nP5 recebeu %d do pipe1\n",n);
+        }
+        
+        
+
     } else if (idProcesso == 6) {
         printf("\nMeu id: %d. Meu pid: %d\nVou receber numeros de 4 por pipe2 e mandar pra 7\n",idProcesso, getpid());
+
+        int n;
+        while (1) {
+            // le valores do pipe2
+            read(shared_area_ptr->pipe2[0], &n, sizeof(int));
+            printf("\nP6 recebeu %d do pipe2\n",n);
+        }
 
     } else {
         printf("\nMeu id: %d. Meu pid: %d\nRecebo numeros de 5,6 e imprimo\n",idProcesso, getpid());
@@ -172,13 +212,25 @@ void handler_p4(int signum) {
 
 void * p4_thread2(void *arg) {
     
+    int n;
     while (1) {
             
         sem_wait((sem_t*)&shared_area_ptr->leitura);
 
         if (filaVazia(&shared_area_ptr->fila1) == 0) {
 
-            printf("\nthread 2, leu: %d\n",removeFila(&shared_area_ptr->fila1));
+            // remove 1 valor de F1 e manda pra P6 pelo pipe2
+            n = removeFila(&shared_area_ptr->fila1);
+            printf("\nthread 2, leu: %d\n",n);
+
+            if (shared_area_ptr->processos[5] == 0) {
+                sleep(1);                                       // espera P6 ser criado, caso P4 leia F1 antes
+            }
+
+            if (shared_area_ptr->processos[5] > 0) {
+                write(shared_area_ptr->pipe2[1],&n,sizeof(int));
+                printf("\nthread 2 mandou %d no pipe2\n",n);
+            }
 
         } else {
             sem_post((sem_t*)&shared_area_ptr->escrita);    // libera o semaforo de escrita
