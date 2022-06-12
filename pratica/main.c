@@ -20,8 +20,8 @@ struct shared_area1 {
     int pipe2[2];
     int busy_wait_vez;
     int contador;
-    int contP5;
-    int contP6;
+    int contador_P5;
+    int contador_P6;
     Fila fila1;
     Fila fila2;
     struct timespec clock_start;
@@ -127,8 +127,8 @@ int main()
     shared_area1_ptr->busy_wait_vez = escolheVez();
 
     shared_area1_ptr->contador = 0;
-    shared_area1_ptr->contP5 = 0;
-    shared_area1_ptr->contP6 = 0;
+    shared_area1_ptr->contador_P5 = 0;
+    shared_area1_ptr->contador_P6 = 0;
 
     shared_area1_ptr->menor = 1000;
     shared_area1_ptr->maior = 1;
@@ -163,8 +163,8 @@ int main()
 
             if (filaCheia(&shared_area1_ptr->fila1) == 0) {              // enquanto F1 tiver espaco
 
-                int n = rand() % 1000 + 1;                              // gera um inteiro entre 1 e 1000
-                insereFila(&shared_area1_ptr->fila1, n);
+                int valor_123 = rand() % 1000 + 1;                              // gera um inteiro entre 1 e 1000
+                insereFila(&shared_area1_ptr->fila1, valor_123);
 
                 if (filaCheia(&shared_area1_ptr->fila1) == 1) {
                     if (shared_area1_ptr->processos[3] == 0) {
@@ -187,32 +187,32 @@ int main()
         
         signal(SIGUSR1, handler_p4);                // define um handler do sinal SIGUSR1 para P4
         
-        pthread_t p4_t2;
-        int t1 = 1, t2 = 2;
-        void *p1, *p2;
-        p1 = &t1;
-        p2 = &t2;
+        pthread_t p4_thread2;
+        int p4_qual_thread1 = 1, p4_qual_thread2 = 2;
+        void *p4_thread1_ptr, *p4_thread2_ptr;
+        p4_thread1_ptr = &p4_qual_thread1;
+        p4_thread2_ptr = &p4_qual_thread2;
 
         // cria thread 2:
-        pthread_create(&p4_t2, NULL, p4, p2);
+        pthread_create(&p4_thread2, NULL, p4, p4_thread2_ptr);
 
         // thread 1:
-        p4(p1);
+        p4(p4_thread1_ptr);
     
     } else if (idProcesso == 5) {       // P5
         
-        int n;
+        int valor_5;
         while (1) {
 
             // le valores do pipe1
-            read(shared_area1_ptr->pipe1[0], &n, sizeof(int));
+            read(shared_area1_ptr->pipe1[0], &valor_5, sizeof(int));
 
             // espera a vez de escrever em F2
             while (1) {
                 if (shared_area1_ptr->busy_wait_vez == 1) {
                      if (filaCheia(&shared_area1_ptr->fila2) == 0) {
-                        insereFila(&shared_area1_ptr->fila2, n);
-                        shared_area1_ptr->contP5++;
+                        insereFila(&shared_area1_ptr->fila2, valor_5);
+                        shared_area1_ptr->contador_P5++;
                         break;
                     } else {
                         shared_area1_ptr->busy_wait_vez = escolheVez();
@@ -226,18 +226,18 @@ int main()
 
     } else if (idProcesso == 6) {       // P6
         
-        int n;
+        int valor_6;
         while (1) {
 
             // le valores do pipe2
-            read(shared_area1_ptr->pipe2[0], &n, sizeof(int));
+            read(shared_area1_ptr->pipe2[0], &valor_6, sizeof(int));
 
             // espera a vez de escrever em F2
             while (1) {
                 if (shared_area1_ptr->busy_wait_vez == 2) {
                      if (filaCheia(&shared_area1_ptr->fila2) == 0) {
-                        insereFila(&shared_area1_ptr->fila2, n);
-                        shared_area1_ptr->contP6++;
+                        insereFila(&shared_area1_ptr->fila2, valor_6);
+                        shared_area1_ptr->contador_P6++;
                         break;
                     } else {
                         shared_area1_ptr->busy_wait_vez = escolheVez();
@@ -248,20 +248,20 @@ int main()
 
     } else {            // P7
 
-        pthread_t t2,t3;
+        pthread_t p7_thread2, p7_thread3;
 
-        int v1 = 3, v2 = 4, v3 = 5;
-        void *p1, *p2, *p3;
-        p1 = &v1;
-        p2 = &v2;
-        p3 = &v3;
+        int p7_thread1_vez = 3, p7_thread2_vez = 4, p7_thread3_vez = 5;
+        void *p7_thread1_ptr, *p7_thread2_ptr, *p7_thread3_ptr;
+        p7_thread1_ptr = &p7_thread1_vez;
+        p7_thread2_ptr = &p7_thread2_vez;
+        p7_thread3_ptr = &p7_thread3_vez;
 
         // cria thread 2 e 3
-        pthread_create(&t2, NULL, p7, p2);
-        pthread_create(&t3, NULL, p7, p3);
+        pthread_create(&p7_thread2, NULL, p7, p7_thread2_ptr);
+        pthread_create(&p7_thread3, NULL, p7, p7_thread3_ptr);
 
         // thread 1
-        p7(p1);
+        p7(p7_thread1_ptr);
 
     }
 
@@ -276,8 +276,8 @@ void handler_p4(int signum) {
 
 void * p4(void *arg) {
     
-    int thread = *(int*)arg;
-    int n;
+    int p4_qual_thread = *(int*)arg;
+    int valor_4;
     while (1) {
             
         sem_wait((sem_t*)&shared_area1_ptr->leitura);
@@ -285,17 +285,17 @@ void * p4(void *arg) {
         if (filaVazia(&shared_area1_ptr->fila1) == 0) {
 
             // remove 1 valor de F1 e manda pelo pipe
-            n = removeFila(&shared_area1_ptr->fila1);
+            valor_4 = removeFila(&shared_area1_ptr->fila1);
 
-            if (shared_area1_ptr->processos[thread+4] == 0) {
+            if (shared_area1_ptr->processos[p4_qual_thread+4] == 0) {
                 sleep(1);                                       // espera P5 ou P6 serem criados, caso P4 leia F1 antes
             }
 
-            if (shared_area1_ptr->processos[thread+4] > 0) {
-                if (thread == 1) {
-                    write(shared_area1_ptr->pipe1[1],&n,sizeof(int));
+            if (shared_area1_ptr->processos[p4_qual_thread+4] > 0) {
+                if (p4_qual_thread == 1) {
+                    write(shared_area1_ptr->pipe1[1],&valor_4,sizeof(int));
                 } else {
-                    write(shared_area1_ptr->pipe2[1],&n,sizeof(int));
+                    write(shared_area1_ptr->pipe2[1],&valor_4,sizeof(int));
                 }
                 
             }
@@ -313,24 +313,24 @@ void * p4(void *arg) {
 
 void * p7(void *arg) {
     int minhaVez = *(int*)arg;
-    int n;
+    int valor_7;
     while (1) {
         if (shared_area1_ptr->busy_wait_vez == minhaVez) {
             if (filaVazia(&shared_area1_ptr->fila2) == 0) {
 
-                n = removeFila(&shared_area1_ptr->fila2);
+                valor_7 = removeFila(&shared_area1_ptr->fila2);
 
-                if (n > shared_area1_ptr->maior) {
-                    shared_area1_ptr->maior = n;
+                if (valor_7 > shared_area1_ptr->maior) {
+                    shared_area1_ptr->maior = valor_7;
                 }
 
-                if (n < shared_area1_ptr->menor) {
-                    shared_area1_ptr->menor = n;
+                if (valor_7 < shared_area1_ptr->menor) {
+                    shared_area1_ptr->menor = valor_7;
                 }
 
-                shared_area2_ptr->valores[n-1]++;
+                shared_area2_ptr->valores[valor_7-1]++;
 
-                printf("%d\n",n);
+                printf("%d\n",valor_7);
 
                 shared_area1_ptr->contador++;
                 if (shared_area1_ptr->contador == 10000) {
@@ -345,13 +345,13 @@ void * p7(void *arg) {
 
 int escolheVez() {
     // gera o proximo busy_wait_vez
-    int x;
+    int vez;
     if (shared_area1_ptr->processos[6] > 0) {
-        x = rand() % 5 + 1;
+        vez = rand() % 5 + 1;
     } else {
-        x = rand() % 2 + 1;
+        vez = rand() % 2 + 1;
     }
-    return x;
+    return vez;
 }
 
 void relatorio() {
@@ -361,10 +361,10 @@ void relatorio() {
         kill(shared_area1_ptr->processos[i], SIGTERM);
     }
 
-    double result = shared_area1_ptr->clock_end.tv_sec - shared_area1_ptr->clock_start.tv_sec;
-    printf("\n\nP7 imprimiu 10000 valores em %.2f segundos\n",result);
-    printf("P5 processou %d valores\n",shared_area1_ptr->contP5);
-    printf("P6 processou %d valores\n",shared_area1_ptr->contP6);
+    double tempo_total = shared_area1_ptr->clock_end.tv_sec - shared_area1_ptr->clock_start.tv_sec;
+    printf("\n\nP7 imprimiu 10000 valores em %.2f segundos\n",tempo_total);
+    printf("P5 processou %d valores\n",shared_area1_ptr->contador_P5);
+    printf("P6 processou %d valores\n",shared_area1_ptr->contador_P6);
     printf("Valor que mais se repetiu: %d\n",(maisRepetido(shared_area2_ptr->valores,1000)+1));
     printf("Menor valor impresso: %d\n",shared_area1_ptr->menor);
     printf("Maior valor impresso: %d\n",shared_area1_ptr->maior);
@@ -374,11 +374,11 @@ void relatorio() {
 }
 
 int maisRepetido(int array[], int size) {
-    int maiorOcorrencia = 0;
+    int maior_ocorrencia = 0;
     int indice = 0;
     for (int i = 0; i < size; i++) {
-        if (array[i] > maiorOcorrencia) {
-            maiorOcorrencia = array[i];
+        if (array[i] > maior_ocorrencia) {
+            maior_ocorrencia = array[i];
             indice = i;
         }
     }
