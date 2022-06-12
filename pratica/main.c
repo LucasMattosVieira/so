@@ -70,6 +70,7 @@ int main()
 	}
 	
 	//printf("shmid1=%d\n",shmid1);
+    //printf("shmid2=%d\n",shmid2);
 	
 	shared_memory1 = shmat(shmid1,(void*)0,0);
     shared_memory2 = shmat(shmid2,(void*)0,0);
@@ -87,6 +88,7 @@ int main()
 	}
 		
 	//printf("\nMemoria compartilhada no endereco=%p\n\n", shared_memory1);
+    //printf("\nMemoria compartilhada no endereco=%p\n\n", shared_memory2);
 
     shared_area1_ptr = (struct shared_area1 *) shared_memory1;
     shared_area2_ptr = (struct shared_area2 *) shared_memory2;
