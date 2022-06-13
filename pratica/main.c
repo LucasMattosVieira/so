@@ -284,34 +284,35 @@ void * p4(void *arg) {
 
         if (filaVazia(&shared_area1_ptr->fila1) == 0) {
 
-            // remove 1 valor de F1 e manda pelo pipe
+            // remove 1 valor de F1
             valor_4 = removeFila(&shared_area1_ptr->fila1);
 
-            if (shared_area1_ptr->processos[p4_qual_thread+4] == 0) {
-                sleep(1);                                       // espera P5 ou P6 serem criados, caso P4 leia F1 antes
-            }
-
-            if (shared_area1_ptr->processos[p4_qual_thread+4] > 0) {
-                if (p4_qual_thread == 1) {
-                    write(shared_area1_ptr->pipe1[1],&valor_4,sizeof(int));
-                } else {
-                    write(shared_area1_ptr->pipe2[1],&valor_4,sizeof(int));
-                }
-                
-            }
-
         } else {
-            sem_post((sem_t*)&shared_area1_ptr->escrita);    // libera o semaforo de escrita
-            continue;                                       // vai para a proxima iteracao sem liberar o semaforo de leitura
+            sem_post((sem_t*)&shared_area1_ptr->escrita);       // libera o semaforo de escrita
+            continue;                                           // vai para a proxima iteracao sem liberar o semaforo de leitura
         }
 
         sem_post((sem_t*)&shared_area1_ptr->leitura);
+
+        if (shared_area1_ptr->processos[p4_qual_thread+4] == 0) {
+                sleep(1);                                           // espera P5 ou P6 serem criados, caso P4 leia F1 antes
+        }
+
+        if (shared_area1_ptr->processos[p4_qual_thread+4] > 0) {    // manda o valor lido pelo pipe
+            if (p4_qual_thread == 1) {
+                write(shared_area1_ptr->pipe1[1],&valor_4,sizeof(int));
+            } else {
+                write(shared_area1_ptr->pipe2[1],&valor_4,sizeof(int));
+            }
+                
+        }
 
     }
 
 }
 
 void * p7(void *arg) {
+
     int minhaVez = *(int*)arg;
     int valor_7;
     while (1) {
@@ -343,8 +344,7 @@ void * p7(void *arg) {
 
 }
 
-int escolheVez() {
-    // gera o proximo busy_wait_vez
+int escolheVez() {  // gera o proximo busy_wait_vez
     int vez;
     if (shared_area1_ptr->processos[6] > 0) {
         vez = rand() % 5 + 1;
@@ -358,7 +358,7 @@ void relatorio() {
     clock_gettime(CLOCK_REALTIME, &shared_area1_ptr->clock_end);
 
     for (int i = 0; i < 6; i++) {
-        kill(shared_area1_ptr->processos[i], SIGTERM);
+        kill(shared_area1_ptr->processos[i], SIGKILL);
     }
 
     double tempo_total = shared_area1_ptr->clock_end.tv_sec - shared_area1_ptr->clock_start.tv_sec;
