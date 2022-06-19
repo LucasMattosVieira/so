@@ -10,10 +10,9 @@ Fila criaFila() {
     return fila;
 }
 
-int insereFila(Fila *fila, int n) {
+void insereFila(Fila *fila, int n) {
     if (filaCheia(fila)) {
         printf("Fila cheia!\n\n");
-        return -1;
     } else {
         fila->elementos[fila->fim] = n;
         fila->fim++;
@@ -21,7 +20,6 @@ int insereFila(Fila *fila, int n) {
             fila->fim = 0;
         }
         fila->nroElementos++;
-        return 0;
     }
 }
 

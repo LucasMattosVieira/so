@@ -12,6 +12,7 @@
 
 #define MEM_SZ 4096
 
+// estrutura da primeira area de shared memory
 struct shared_area1 {
     sem_t escrita;
     sem_t leitura;
@@ -19,9 +20,9 @@ struct shared_area1 {
     int pipe1[2];
     int pipe2[2];
     int busy_wait_vez;
-    int contador;
     int contador_P5;
     int contador_P6;
+    int contador_P7;
     Fila fila1;
     Fila fila2;
     struct timespec clock_start;
@@ -30,6 +31,7 @@ struct shared_area1 {
     int maior;  
 };
 
+// estrutura da segunda area de shared memory
 struct shared_area2 {
     int valores[1000];
 };
@@ -37,7 +39,7 @@ struct shared_area2 {
 struct shared_area1 *shared_area1_ptr;
 struct shared_area2 *shared_area2_ptr;
 
-// prototipos
+// prototipos das funcoes
 void handler_p4(int p);
 void * p4(void *arg);
 void * p7(void *arg);
@@ -50,48 +52,48 @@ int main()
     struct timespec start_p1;
     clock_gettime(CLOCK_REALTIME, &start_p1);
 
-    key_t key1=1234, key2=5678;
-	void *shared_memory1 = (void *)0;
-    void *shared_memory2 = (void *)0;
-	int shmid1, shmid2;
+    key_t key1 = 1234, key2 = 5678;
+	void *shared_memory_area1 = (void *)0;
+    void *shared_memory_area2 = (void *)0;
+	int shared_memory_id1, shared_memory_id2;
 
-    shmid1 = shmget(key1,MEM_SZ,0666|IPC_CREAT);
-	if ( shmid1 == -1 )
+    shared_memory_id1 = shmget(key1, MEM_SZ, 0666|IPC_CREAT);
+	if ( shared_memory_id1 == -1 )
 	{
 		printf("shmget falhou\n");
 		exit(-1);
 	}
 
-    shmid2 = shmget(key2,MEM_SZ,0666|IPC_CREAT);
-	if ( shmid2 == -1 )
+    shared_memory_id2 = shmget(key2, MEM_SZ, 0666|IPC_CREAT);
+	if ( shared_memory_id2 == -1 )
 	{
 		printf("shmget falhou\n");
 		exit(-1);
 	}
 	
-	//printf("shmid1=%d\n",shmid1);
-    //printf("shmid2=%d\n",shmid2);
+	//printf("shared_memory_id1=%d\n",shared_memory_id1);
+    //printf("shared_memory_id2=%d\n",shared_memory_id2);
 	
-	shared_memory1 = shmat(shmid1,(void*)0,0);
-    shared_memory2 = shmat(shmid2,(void*)0,0);
+	shared_memory_area1 = shmat(shared_memory_id1,(void*)0, 0);
+    shared_memory_area2 = shmat(shared_memory_id2,(void*)0, 0);
 	
-	if (shared_memory1 == (void *) -1 )
+	if (shared_memory_area1 == (void *) -1 )
 	{
 		printf("shmat falhou\n");
 		exit(-1);
 	}
 
-    if (shared_memory2 == (void *) -1 )
+    if (shared_memory_area2 == (void *) -1 )
 	{
 		printf("shmat falhou\n");
 		exit(-1);
 	}
 		
-	//printf("\nMemoria compartilhada no endereco=%p\n\n", shared_memory1);
-    //printf("\nMemoria compartilhada no endereco=%p\n\n", shared_memory2);
+	//printf("\nMemoria compartilhada no endereco=%p\n\n", shared_memory_area1);
+    //printf("\nMemoria compartilhada no endereco=%p\n\n", shared_memory_area2);
 
-    shared_area1_ptr = (struct shared_area1 *) shared_memory1;
-    shared_area2_ptr = (struct shared_area2 *) shared_memory2;
+    shared_area1_ptr = (struct shared_area1 *) shared_memory_area1;
+    shared_area2_ptr = (struct shared_area2 *) shared_memory_area2;
     
     shared_area1_ptr->clock_start = start_p1;
 
@@ -109,7 +111,7 @@ int main()
     shared_area1_ptr->fila2 = criaFila();
 
     for (int i = 0; i < 7; i++) {
-        shared_area1_ptr->processos[i] = 0;     // preenche os pids salvos na shared_memory1 com 0 ate que sejam criados
+        shared_area1_ptr->processos[i] = 0;     // preenche os pids salvos na shared_memory_area1 com 0 ate que sejam criados
     }
     
     shared_area1_ptr->processos[0] = getpid();
@@ -126,7 +128,7 @@ int main()
 
     shared_area1_ptr->busy_wait_vez = escolheVez();
 
-    shared_area1_ptr->contador = 0;
+    shared_area1_ptr->contador_P7 = 0;
     shared_area1_ptr->contador_P5 = 0;
     shared_area1_ptr->contador_P6 = 0;
 
@@ -168,7 +170,7 @@ int main()
 
                 if (filaCheia(&shared_area1_ptr->fila1) == 1) {
                     if (shared_area1_ptr->processos[3] == 0) {
-                        sleep(1);                                       // espera P4 ser criado, caso F1 encha antes
+                        sleep(1);                                       // espera P4 ser criado, caso F1 encha antes, para poder enviar o signal corretamente
                     }        
 
                     if (shared_area1_ptr->processos[3] > 0) {
@@ -210,9 +212,10 @@ int main()
             // espera a vez de escrever em F2
             while (1) {
                 if (shared_area1_ptr->busy_wait_vez == 1) {
-                     if (filaCheia(&shared_area1_ptr->fila2) == 0) {
+                    if (filaCheia(&shared_area1_ptr->fila2) == 0) {
                         insereFila(&shared_area1_ptr->fila2, valor_5);
                         shared_area1_ptr->contador_P5++;
+                        shared_area1_ptr->busy_wait_vez = escolheVez();
                         break;
                     } else {
                         shared_area1_ptr->busy_wait_vez = escolheVez();
@@ -238,6 +241,7 @@ int main()
                      if (filaCheia(&shared_area1_ptr->fila2) == 0) {
                         insereFila(&shared_area1_ptr->fila2, valor_6);
                         shared_area1_ptr->contador_P6++;
+                        shared_area1_ptr->busy_wait_vez = escolheVez();
                         break;
                     } else {
                         shared_area1_ptr->busy_wait_vez = escolheVez();
@@ -294,10 +298,6 @@ void * p4(void *arg) {
 
         sem_post((sem_t*)&shared_area1_ptr->leitura);
 
-        if (shared_area1_ptr->processos[p4_qual_thread+4] == 0) {
-                sleep(1);                                           // espera P5 ou P6 serem criados, caso P4 leia F1 antes
-        }
-
         if (shared_area1_ptr->processos[p4_qual_thread+4] > 0) {    // manda o valor lido pelo pipe
             if (p4_qual_thread == 1) {
                 write(shared_area1_ptr->pipe1[1],&valor_4,sizeof(int));
@@ -333,8 +333,8 @@ void * p7(void *arg) {
 
                 printf("%d\n",valor_7);
 
-                shared_area1_ptr->contador++;
-                if (shared_area1_ptr->contador == 10000) {
+                shared_area1_ptr->contador_P7++;
+                if (shared_area1_ptr->contador_P7 == 10000) {
                     relatorio();
                 }
             }
@@ -362,7 +362,7 @@ void relatorio() {
     }
 
     double tempo_total = shared_area1_ptr->clock_end.tv_sec - shared_area1_ptr->clock_start.tv_sec;
-    printf("\n\nP7 imprimiu 10000 valores em %.2f segundos\n",tempo_total);
+    printf("\n\nO programa foi executado por %.2f segundos\n",tempo_total);
     printf("P5 processou %d valores\n",shared_area1_ptr->contador_P5);
     printf("P6 processou %d valores\n",shared_area1_ptr->contador_P6);
     printf("Valor que mais se repetiu: %d\n",(maisRepetido(shared_area2_ptr->valores,1000)+1));
